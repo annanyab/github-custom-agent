@@ -1,0 +1,8 @@
+{
+  "run_id": "20260421-132101",
+  "source_fsd": "/docs/agents/create-story/input/sample-fsd.md",
+  "story_output_file": "/docs/agents/create-story/output/user-stories-sample-fsd-20260421-132101.md",
+  "validation_report_file": "/docs/agents/create-story/output/logs/validation-report-20260421-132101.md",
+  "status": "PASS",
+  "generated_at": "2026-04-21T13:21:01"
+}

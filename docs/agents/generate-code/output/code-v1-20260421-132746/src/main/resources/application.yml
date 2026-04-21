@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: auth-service
+  security:
+    oauth2:
+      client:
+        registration:
+          azure:
+            client-id: ${AZURE_CLIENT_ID:default-client-id}
+            client-secret: ${AZURE_CLIENT_SECRET:default-client-secret}
+            scope:
+              - openid
+              - profile
+              - email
+        provider:
+          azure:
+            issuer-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/v2.0
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+azure:
+  ad:
+    tenant-id: ${AZURE_TENANT_ID:default-tenant}
+    client-id: ${AZURE_CLIENT_ID:default-client}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
