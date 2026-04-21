@@ -1,0 +1,11 @@
+{
+  "stories_input_file": "/docs/agents/create-story/output/user-stories-sample-fsd-20260421-140000.md",
+  "source_story_run_id": "20260421-140000",
+  "code_output_path": "/docs/agents/generate-code/output/code-v1-20260421-140000/",
+  "version": "v1",
+  "architecture_score": 5,
+  "run_id": "20260421-140000",
+  "status": "PASS",
+  "code_generation_report_file": "/docs/agents/generate-code/output/logs/code-generation-report-v1-20260421-140000.md",
+  "generated_at": "2026-04-21T14:00:30"
+}

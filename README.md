@@ -28,8 +28,117 @@ This is the "Audit Trail." It serves as the physical storage for all artifacts g
 
 | Agent | Role | Responsibility |
 | :--- | :--- | :--- |
+| **`agentic-fsd-to-code`** | Orchestrator (NEW) | Coordinates end-to-end pipeline: invokes create-story, gates on PASS, invokes generate-code, produces unified audit trail. |
 | **`create-story`** | Business Analyst | Transforms high-level FSD into INVEST-compliant user stories; produces validation report and handoff manifest. |
 | **`generate-code`** | Technical Architect | Consumes validated stories and generates Spring Boot code; gated on PASS validation; produces versioned code artifacts. |
+
+---
+
+## 🎬 End-to-End Orchestration (`agentic-fsd-to-code`)
+
+### Unified Pipeline Orchestration
+```
+Invoke:  @agentic-fsd-to-code run with defaults.
+         @agentic-fsd-to-code run with source_fsd=filename.md.
+         @agentic-fsd-to-code run with version=v2.
+
+Execution Flow:
+  1. Stage 0: Initialize (resolve run_id, source_fsd, version)
+  2. Stage 1: Invoke @create-story (poll for story-handoff)
+  3. Gate #1: Check status == PASS (STOP if FAIL)
+  4. Stage 2: Invoke @generate-code with story handoff manifest
+  5. Gate #2: Check status == PASS (STOP if FAIL)
+  6. Stage 3: Finalize (write orchestration-run, manifests, audit trail)
+
+Outputs:
+  - orchestration-run-<run_id>.md          (human-readable report)
+  - orchestration-manifest-<run_id>.json   (machine-readable manifest)
+  - orchestration-audit-<run_id>.md        (complete audit trail)
+```
+
+**Orchestration Features:**
+- **Unified Run ID**: Single `run_id` flows end-to-end for complete traceability
+- **Quality Gates**: PASS/FAIL validation at each stage; fail-fast design
+- **Rich Audit Trail**: Timestamps, scores, decision rationale, artifact paths
+- **Graceful Handoff**: Reads handoff JSON manifests; never assumes success
+- **Error Handling**: Timeouts detected (5 min), clear error messages, recovery guidance
+
+**Orchestration Manifest** (`orchestration-manifest-<run_id>.json`):
+```json
+{
+  "run_id": "20260421-140000",
+  "version": "v1",
+  "status": "COMPLETE_SUCCESS",
+  "pipeline_stages": {
+    "story_generation": {
+      "status": "PASS",
+      "story_output_file": "path/to/stories.md",
+      "eval_score": 5
+    },
+    "code_generation": {
+      "status": "PASS",
+      "code_output_path": "path/to/code-v1-20260421-140000/",
+      "architecture_score": 5
+    }
+  },
+  "orchestration_score": 5,
+  "generated_at": "2026-04-21T14:00:30"
+}
+```
+
+---
+
+## 🎬 End-to-End Orchestration (`agentic-fsd-to-code`)
+
+### Unified Pipeline Orchestration
+```
+Invoke:  @agentic-fsd-to-code run with defaults.
+         @agentic-fsd-to-code run with source_fsd=filename.md.
+         @agentic-fsd-to-code run with version=v2.
+
+Execution Flow:
+  1. Stage 0: Initialize (resolve run_id, source_fsd, version)
+  2. Stage 1: Invoke @create-story (poll for story-handoff)
+  3. Gate #1: Check status == PASS (STOP if FAIL)
+  4. Stage 2: Invoke @generate-code with story handoff manifest
+  5. Gate #2: Check status == PASS (STOP if FAIL)
+  6. Stage 3: Finalize (write orchestration-run, manifests, audit trail)
+
+Outputs:
+  - orchestration-run-<run_id>.md          (human-readable report)
+  - orchestration-manifest-<run_id>.json   (machine-readable manifest)
+  - orchestration-audit-<run_id>.md        (complete audit trail)
+```
+
+**Orchestration Features:**
+- **Unified Run ID**: Single `run_id` flows end-to-end for complete traceability
+- **Quality Gates**: PASS/FAIL validation at each stage; fail-fast design
+- **Rich Audit Trail**: Timestamps, scores, decision rationale, artifact paths
+- **Graceful Handoff**: Reads handoff JSON manifests; never assumes success
+- **Error Handling**: Timeouts detected (5 min), clear error messages, recovery guidance
+
+**Orchestration Manifest** (`orchestration-manifest-<run_id>.json`):
+```json
+{
+  "run_id": "20260421-140000",
+  "version": "v1",
+  "status": "COMPLETE_SUCCESS",
+  "pipeline_stages": {
+    "story_generation": {
+      "status": "PASS",
+      "story_output_file": "path/to/stories.md",
+      "eval_score": 5
+    },
+    "code_generation": {
+      "status": "PASS",
+      "code_output_path": "path/to/code-v1-20260421-140000/",
+      "architecture_score": 5
+    }
+  },
+  "orchestration_score": 5,
+  "generated_at": "2026-04-21T14:00:30"
+}
+```
 
 ---
 
@@ -157,12 +266,54 @@ Outputs:
 │           │       ├── code-generation-report-v1-<run_id>.md
 │           │       └── code-handoff-v1-<run_id>.json
 │           └── prompt.md           # Agent invocation reference
+│       └── agentic-fsd-to-code/     # NEW: Orchestrator Agent
+│           ├── agent.md
+│           ├── prompt.md
+│           ├── instructions/
+│           ├── evals/
+│           └── benchmark/
+├── docs/
+│   ├── agents/                     # Story & Code Artifact Registry
+│   │   ├── create-story/
+│   │   │   ├── input/              # FSD source files
+│   │   │   ├── output/
+│   │   │   │   ├── user-stories-<source>-<run_id>.md
+│   │   │   │   └── logs/
+│   │   │   │       ├── validation-report-<run_id>.md
+│   │   │   │       └── story-handoff-<run_id>.json
+│   │   │   └── prompt.md
+│   │   └── generate-code/
+│   │       ├── input/
+│   │       ├── output/
+│   │       │   ├── code-v1-<run_id>/
+│   │       │   └── logs/
+│   │       │       ├── code-generation-report-v1-<run_id>.md
+│   │       │       └── code-handoff-v1-<run_id>.json
+│   │       └── prompt.md
+│   └── orchestration/              # NEW: Orchestration Artifact Registry
+│       └── agentic-fsd-to-code/
+│           ├── output/
+│           │   └── orchestration-run-<run_id>.md
+│           └── logs/
+│               ├── orchestration-manifest-<run_id>.json
+│               ├── orchestration-audit-<run_id>.md
+│               └── orchestration-run-<run_id>.md
 └── README.md
 ```
 
 ---
 
 ## 🚀 Quick Start / Usage Examples
+
+### Example 0: End-to-End Orchestration (NEW - Recommended!)
+```bash
+@agentic-fsd-to-code run with defaults.
+```
+- Auto-discovers FSD from input folder
+- Invokes create-story with automatic gating
+- On PASS, invokes generate-code automatically
+- Produces unified orchestration manifest with complete traceability
+- **Single command for entire FSD → Stories → Code pipeline**
 
 ### Example 1: Run Story Generation with Defaults
 ```bash
@@ -194,9 +345,45 @@ Outputs:
 @generate-code run with handoff_manifest=/docs/agents/create-story/output/logs/story-handoff-20260421-132101.json.
 ```
 
+### Example 6: Orchestration with Explicit Version
+```bash
+@agentic-fsd-to-code run with version=v2.
+```
+
+### Example 7: Orchestration with Manual Gate Approval
+```bash
+@agentic-fsd-to-code run with auto_proceed=false.
+```
+- Stops after story validation PASS
+- Awaits manual approval before calling generate-code
+
+### Example 8: Orchestration with Explicit Source FSD
+```bash
+@agentic-fsd-to-code run with source_fsd=my-requirements.md and version=v1.1.
+```
+
 ---
 
 ## 📊 Artifact Output Paths
+
+### Orchestration Artifacts (NEW)
+```
+docs/orchestration/agentic-fsd-to-code/output/
+└── orchestration-run-20260421-140000.md        (human-readable pipeline report)
+
+docs/orchestration/agentic-fsd-to-code/logs/
+├── orchestration-manifest-20260421-140000.json (machine-readable manifest)
+├── orchestration-audit-20260421-140000.md      (complete audit trail)
+└── orchestration-run-20260421-140000.md
+```
+
+**Orchestration Manifest Includes:**
+- Pipeline status (IN_PROGRESS | STOPPED_AT_* | COMPLETE_SUCCESS)
+- Story generation status and scores
+- Code generation status and scores
+- Orchestration score (1-5 scale)
+- All artifact paths (for downstream consumption)
+- Timestamps and run_id tracking
 
 ### Story Generation Artifacts
 ```
@@ -230,28 +417,35 @@ docs/agents/generate-code/output/
     ├── code-generation-report-v1-20260421-140000.md
     ├── code-handoff-v1-20260421-132746.json          (manifest)
     └── code-handoff-v1-20260421-140000.json
-```
 
 ---
 
-## 🔗 Orchestration & Next Steps
+## 🔗 Orchestration Architecture
 
-### Future: Orchestrator Agent
-Create `.github/agents/orchestrator.agent.md` to:
-1. Invoke `@create-story run with defaults`
-2. Wait for `story-handoff-*.json` with `status == PASS`
-3. Invoke `@generate-code run with defaults` (will auto-gate)
-4. Collect both handoff manifests
-5. Produce unified `orchestrator-run-<run_id>.md` summary
+### Orchestrator Agent Implementation (✅ COMPLETE)
 
-Example orchestrator execution:
-```
-Orchestrator Start (run_id=20260421-150000)
-  ├─> Invoke @create-story → generates run 20260421-132101 (PASS)
-  ├─> Invoke @generate-code → generates run 20260421-132746 (PASS)
-  └─> Write orchestrator-summary-20260421-150000.md
-      (includes story-handoff, code-handoff, full traceability)
-```
+The `.github/agents/agentic-fsd-to-code.agent.md` orchestrator now implements a **Pipeline Orchestration Pattern** with:
+
+**5-Stage Execution Protocol:**
+1. **Stage 0: Initialize** → Resolve run_id, source_fsd, version from parameters or defaults
+2. **Stage 1: Story Generation** → Invoke `@create-story`, poll for `story-handoff-<run_id>.json`
+3. **Gate #1: Validation Check** → Read manifest, verify `status == PASS` (STOP if FAIL)
+4. **Stage 2: Code Generation** → Invoke `@generate-code` with story handoff manifest
+5. **Gate #2: Validation Check** → Read manifest, verify `status == PASS` (STOP if FAIL)
+6. **Stage 3: Finalize** → Write unified `orchestration-manifest-<run_id>.json` and audit trail
+
+**Orchestration Guarantees:**
+- ✅ Unified `run_id` flows through all 3 agents (story → code → orchestrator)
+- ✅ Quality gates prevent downstream stages if upstream fails
+- ✅ Complete audit trail with timestamps, scores, and artifact paths
+- ✅ Graceful error handling with timeout detection (5 min per stage)
+- ✅ Idempotent re-runs with checkpoint recovery (same run_id)
+
+**Supporting Materials:**
+- `orchestration-guidelines.md` → Implementation checklist, handoff patterns, error recovery
+- `pipeline-rubric.md` → 3-dimension scoring (story 40%, code 40%, orchestration 20%)
+- `successful-run-example.md` → Complete benchmark with timeline and all 3 final manifests
+- `prompt.md` → Quick-start invocation examples
 
 ---
 
@@ -279,7 +473,13 @@ When adding new agents to this workspace:
 │       │   ├── evals/
 │       │   ├── instructions/
 │       │   └── skills/
-│       └── generate-code/          # Logic: Coding Specialist
+│       ├── generate-code/          # Logic: Coding Specialist
+│       │   ├── agent.md
+│       │   ├── benchmark/
+│       │   ├── evals/
+│       │   ├── instructions/
+│       │   └── skills/
+│       └── agentic-fsd-to-code/    # Logic: Orchestrator
 │           ├── agent.md
 │           ├── benchmark/
 │           ├── evals/
@@ -290,7 +490,11 @@ When adding new agents to this workspace:
 │       ├── create-story/
 │       │   ├── input/
 │       │   └── output/             # Story artifacts live here
-│       └── generate-code/
-│           ├── input/
-│           └── output/             # Terraform/App code lives here
+│       ├── generate-code/
+│       │   ├── input/
+│       │   └── output/             # Code artifacts live here
+│       └── orchestration/          # Orchestration artifacts
+│           └── agentic-fsd-to-code/
+│               ├── output/
+│               └── logs/
 └── README.md
