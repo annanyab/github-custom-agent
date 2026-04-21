@@ -28,8 +28,242 @@ This is the "Audit Trail." It serves as the physical storage for all artifacts g
 
 | Agent | Role | Responsibility |
 | :--- | :--- | :--- |
-| **`create-story`** | Business Analyst | Transforms high-level intent into structured user stories in `docs/`. |
-| **`generate-code`** | Technical Architect | Converts stories into Azure-compliant HCL and application logic. |
+| **`create-story`** | Business Analyst | Transforms high-level FSD into INVEST-compliant user stories; produces validation report and handoff manifest. |
+| **`generate-code`** | Technical Architect | Consumes validated stories and generates Spring Boot code; gated on PASS validation; produces versioned code artifacts. |
+
+---
+
+## 🔄 Pipeline Execution Flow
+
+### Stage 1: Story Generation (`create-story`)
+```
+Invoke:  @create-story run with defaults.
+         @create-story run with source_fsd=filename.md.
+
+Outputs:
+  - user-stories-<source>-<run_id>.md          (timestamped story file)
+  - validation-report-<run_id>.md              (eval score + PASS/FAIL)
+  - story-handoff-<run_id>.json                (handoff manifest for downstream)
+```
+
+**Handoff Manifest** (`story-handoff-<run_id>.json`):
+```json
+{
+  "run_id": "20260421-132101",
+  "source_fsd": "path/to/fsd.md",
+  "story_output_file": "path/to/stories.md",
+  "validation_report_file": "path/to/report.md",
+  "status": "PASS",
+  "generated_at": "2026-04-21T13:21:01"
+}
+```
+
+### Stage 2: Code Generation (`generate-code`)
+```
+Invoke:  @generate-code run with defaults.
+         @generate-code run with version=v2.
+         @generate-code run with handoff_manifest=path/to/story-handoff-<run_id>.json.
+
+Resolution:
+  1. Loads latest story-handoff-*.json from docs/agents/create-story/output/logs/
+  2. Verifies status == PASS (gate check)
+  3. Reads story_output_file from manifest
+  4. Generates code into versioned timestamped folder
+
+Outputs:
+  - code-<version>-<run_id>/                   (versioned project folder)
+  - code-generation-report-<version>-<run_id>.md
+  - code-handoff-<version>-<run_id>.json
+```
+
+**Code Handoff Manifest** (`code-handoff-v1-<run_id>.json`):
+```json
+{
+  "run_id": "20260421-132746",
+  "version": "v1",
+  "stories_input_file": "path/to/stories.md",
+  "source_story_run_id": "20260421-132101",
+  "code_output_path": "/docs/agents/generate-code/output/code-v1-20260421-132746/",
+  "code_generation_report_file": "path/to/report.md",
+  "status": "PASS",
+  "generated_at": "2026-04-21T13:27:46"
+}
+```
+
+---
+
+## 🎯 Design Principles
+
+### No Hardcoding
+- All file paths, names, and input references are resolved dynamically.
+- Agents discover inputs using priority rules (explicit param → auto-detect → most recent).
+- No FSD filename or story filename is hardcoded in agent definitions.
+
+### Timestamped, Versioned Outputs
+- Every run gets a unique `run_id` (format: `yyyyMMdd-HHmmss`).
+- `generate-code` supports semantic versioning (`v1`, `v1.1`, `v2`) for code releases.
+- Outputs are never overwritten; collisions append a suffix (e.g., `-v2`).
+- Full audit trail: every artifact is time-scoped and traceable to source.
+
+### Handoff Manifests
+- Each agent writes a handoff manifest (JSON) for downstream consumption.
+- Manifests carry validation status, run IDs, and exact file paths.
+- Enables orchestrator agents to gate on status (PASS before proceeding to next stage).
+- Removes brittle hardcoded coupling between agents.
+
+### Quality Gates
+- `create-story` produces an eval score (1-5) and status (PASS/FAIL).
+- `generate-code` checks manifest status before generating code (gate check).
+- If PASS fails, `generate-code` stops and writes a failure report.
+
+---
+
+## 📁 Repository Structure
+
+```text
+.
+├── .github/
+│   └── agents/
+│       ├── create-story/           # Logic: Storytelling Specialist
+│       │   ├── agent.md            # Agent contract (no hardcoding)
+│       │   ├── prompt.md           # Usage examples
+│       │   ├── instructions/
+│       │   ├── evals/
+│       │   └── benchmark/
+│       └── generate-code/          # Logic: Coding Specialist
+│           ├── agent.md            # Agent contract (no hardcoding)
+│           ├── prompt.md           # Usage examples
+│           ├── instructions/
+│           ├── evals/
+│           └── benchmark/
+├── docs/
+│   └── agents/                     # Artifact Registry (Documentation Plane)
+│       ├── create-story/
+│       │   ├── input/              # FSD source files
+│       │   ├── output/
+│       │   │   ├── user-stories-<source>-<run_id>.md
+│       │   │   └── logs/
+│       │   │       ├── validation-report-<run_id>.md
+│       │   │       └── story-handoff-<run_id>.json
+│       │   └── prompt.md           # Agent invocation reference
+│       └── generate-code/
+│           ├── input/              # Not used (pulls from create-story)
+│           ├── output/
+│           │   ├── code-v1-<run_id>/      # Versioned project folder
+│           │   │   ├── pom.xml
+│           │   │   ├── src/main/java/...
+│           │   │   └── src/main/resources/
+│           │   └── logs/
+│           │       ├── code-generation-report-v1-<run_id>.md
+│           │       └── code-handoff-v1-<run_id>.json
+│           └── prompt.md           # Agent invocation reference
+└── README.md
+```
+
+---
+
+## 🚀 Quick Start / Usage Examples
+
+### Example 1: Run Story Generation with Defaults
+```bash
+@create-story run with defaults.
+```
+- Discovers FSD automatically from `docs/agents/create-story/input/`
+- Generates timestamped story, validation report, and handoff manifest
+
+### Example 2: Run Story Generation with Explicit FSD
+```bash
+@create-story run with source_fsd=sample-fsd.md.
+```
+
+### Example 3: Run Code Generation with Defaults (gates on PASS)
+```bash
+@generate-code run with defaults.
+```
+- Loads latest `story-handoff-*.json` 
+- Verifies `status == PASS` before proceeding (gate check)
+- Generates code into versioned folder `code-v1-<run_id>/`
+
+### Example 4: Run Code Generation with Explicit Version
+```bash
+@generate-code run with version=v2.
+```
+
+### Example 5: Pin Code Generation to Specific Story
+```bash
+@generate-code run with handoff_manifest=/docs/agents/create-story/output/logs/story-handoff-20260421-132101.json.
+```
+
+---
+
+## 📊 Artifact Output Paths
+
+### Story Generation Artifacts
+```
+docs/agents/create-story/output/
+├── user-stories-sample-fsd-20260421-132101.md
+├── user-stories-sample-fsd-20260421-133000.md
+└── logs/
+    ├── validation-report-20260421-132101.md       (eval score, PASS/FAIL)
+    ├── validation-report-20260421-133000.md
+    ├── story-handoff-20260421-132101.json         (manifest)
+    └── story-handoff-20260421-133000.json
+```
+
+### Code Generation Artifacts
+```
+docs/agents/generate-code/output/
+├── code-v1-20260421-132746/                       (Spring Boot project)
+│   ├── pom.xml
+│   ├── src/main/java/com/enterprise/gateway/authservice/
+│   │   ├── AuthServiceApplication.java
+│   │   ├── controller/AuthController.java
+│   │   ├── service/AuthService.java
+│   │   ├── service/AzureAdAuthenticator.java
+│   │   ├── dto/LoginRequest.java
+│   │   └── dto/LoginResponse.java
+│   └── src/main/resources/application.yml
+├── code-v1-20260421-140000/                       (Another version)
+│   └── ...
+└── logs/
+    ├── code-generation-report-v1-20260421-132746.md   (architecture score)
+    ├── code-generation-report-v1-20260421-140000.md
+    ├── code-handoff-v1-20260421-132746.json          (manifest)
+    └── code-handoff-v1-20260421-140000.json
+```
+
+---
+
+## 🔗 Orchestration & Next Steps
+
+### Future: Orchestrator Agent
+Create `.github/agents/orchestrator.agent.md` to:
+1. Invoke `@create-story run with defaults`
+2. Wait for `story-handoff-*.json` with `status == PASS`
+3. Invoke `@generate-code run with defaults` (will auto-gate)
+4. Collect both handoff manifests
+5. Produce unified `orchestrator-run-<run_id>.md` summary
+
+Example orchestrator execution:
+```
+Orchestrator Start (run_id=20260421-150000)
+  ├─> Invoke @create-story → generates run 20260421-132101 (PASS)
+  ├─> Invoke @generate-code → generates run 20260421-132746 (PASS)
+  └─> Write orchestrator-summary-20260421-150000.md
+      (includes story-handoff, code-handoff, full traceability)
+```
+
+---
+
+## 📝 Contributing
+
+When adding new agents to this workspace:
+1. **Define zones** in `agent.md`: `input_zone`, `output_zone`, `log_zone`
+2. **Support runtime parameters**: No hardcoding of filenames (use dynamic resolution)
+3. **Write handoff manifests**: JSON with `run_id`, `status`, `generated_at`, artifact paths
+4. **Use timestamped filenames**: Format `<artifact>-<run_id>.md` (collisions append `-v2`, etc.)
+5. **Implement validation gates**: eval score + PASS/FAIL status
+6. **Minimal prompts**: Keep `prompt.md` short; agent contract owns defaults and logic
 
 ---
 
