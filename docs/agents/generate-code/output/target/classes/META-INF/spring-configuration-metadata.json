@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "name": "auth.azure",
+      "type": "com.team.tor.authservice.config.AzureAdProperties",
+      "sourceType": "com.team.tor.authservice.config.AzureAdProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "auth.azure.allowed-corporate-domains",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "com.team.tor.authservice.config.AzureAdProperties"
+    },
+    {
+      "name": "auth.azure.client-id",
+      "type": "java.lang.String",
+      "sourceType": "com.team.tor.authservice.config.AzureAdProperties"
+    },
+    {
+      "name": "auth.azure.client-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.team.tor.authservice.config.AzureAdProperties"
+    },
+    {
+      "name": "auth.azure.scope",
+      "type": "java.lang.String",
+      "sourceType": "com.team.tor.authservice.config.AzureAdProperties"
+    },
+    {
+      "name": "auth.azure.tenant-id",
+      "type": "java.lang.String",
+      "sourceType": "com.team.tor.authservice.config.AzureAdProperties"
+    }
+  ],
+  "hints": []
+}

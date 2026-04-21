@@ -1,0 +1,1 @@
+@generate-code run the code generation for user stories creted within docs/agents/create-story/output/auth-service-user-stories.md. Ensure you generate the stories Please generate the java code in docs/agents/generate-code/output  and the validation-report in /docs/agents/generate-code/output/logs for the team torIf files are already existing , don't generate the code. 

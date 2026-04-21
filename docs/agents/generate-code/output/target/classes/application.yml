@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+auth:
+  azure:
+    tenant-id: your-tenant-id
+    client-id: your-client-id
+    client-secret: your-client-secret
+    scope: openid profile email
+    allowed-corporate-domains:
+      - contoso.com
+      - fabrikam.com

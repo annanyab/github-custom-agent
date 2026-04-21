@@ -1,0 +1,1 @@
+@create-story run the full flow for sample-fsd.md. Ensure you generate the stories in /output and the validation-report in /output/logs for the team to review. If files are already existing append the new with timestamp.
